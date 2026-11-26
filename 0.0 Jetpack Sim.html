@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>JETPACK SIM</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #070b10;
+  color: #b8c8d8;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#gameWrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#panel {
+  width: 220px;
+  min-width: 220px;
+  background: #040710;
+  border-left: 1px solid #14202e;
+  padding: 15px 13px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: #14202e transparent;
+}
+
+.panel-title {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #ff7a28;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #14202e;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.panel-title svg { flex-shrink: 0; }
+
+.section-label {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  color: #26364a;
+  text-transform: uppercase;
+  margin: 12px 0 7px;
+}
+
+.param { margin-bottom: 8px; }
+
+.param-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 3px;
+}
+
+.param-name { font-size: 10px; color: #6a7e92; }
+.param-unit { font-size: 8px; color: #3a5068; margin-left: 2px; }
+.param-value { font-size: 10px; color: #ff9a50; font-weight: bold; }
+
+input[type=range] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 2px;
+  background: #14202e;
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px; height: 11px;
+  background: #ff7a28;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 6px #ff7a2860;
+}
+input[type=range]:hover { background: #1e3048; }
+
+.divider {
+  height: 1px;
+  background: #14202e;
+  margin: 6px 0;
+}
+
+.controls-box {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #14202e;
+  font-size: 9px;
+  line-height: 1.95;
+  color: #2a3e52;
+}
+
+.ctrl-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+kbd {
+  background: #14202e;
+  color: #5a7090;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-family: 'Courier New', monospace;
+  border: 1px solid #243448;
+}
+
+.reset-btn {
+  margin-top: 11px;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid #14202e;
+  color: #2a3e52;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.reset-btn:hover { border-color: #ff7a28; color: #ff7a28; }
+</style>
+</head>
+<body>
+
+<div id="gameWrap"><canvas id="c"></canvas></div>
+
+<div id="panel">
+  <div class="panel-title">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M7 1 L9 6 L7 5 L5 6 Z" fill="#ff7a28"/>
+      <path d="M5.5 6 L4 11 L7 9 L10 11 L8.5 6" fill="#ff7a28" stroke="#ff7a28" stroke-width="0.5"/>
+    </svg>
+    JETPACK SIM
+  </div>
+
+  <div class="section-label">Physics</div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Gravity</span>
+      <span><span class="param-value" id="v-gravity">0.35</span></span>
+    </div>
+    <input type="range" id="s-gravity" min="0.05" max="1.5" step="0.01" value="0.35">
+  </div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Thrust Force</span>
+      <span><span class="param-value" id="v-thrust">0.55</span></span>
+    </div>
+    <input type="range" id="s-thrust" min="0.05" max="2.0" step="0.01" value="0.55">
+  </div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Air Drag</span>
+      <span><span class="param-value" id="v-drag">0.988</span></span>
+    </div>
+    <input type="range" id="s-drag" min="0.90" max="0.9995" step="0.001" value="0.988">
+  </div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Turn Speed</span>
+      <span><span class="param-value" id="v-turn">2.5</span><span class="param-unit">°/f</span></span>
+    </div>
+    <input type="range" id="s-turn" min="0.5" max="8.0" step="0.1" value="2.5">
+  </div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Walk Accel</span>
+      <span><span class="param-value" id="v-walk">2.5</span></span>
+    </div>
+    <input type="range" id="s-walk" min="0.5" max="7.0" step="0.1" value="2.5">
+  </div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Ground Friction</span>
+      <span><span class="param-value" id="v-friction">0.80</span></span>
+    </div>
+    <input type="range" id="s-friction" min="0.40" max="0.99" step="0.01" value="0.80">
+  </div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Max Speed</span>
+      <span><span class="param-value" id="v-maxspeed">18</span></span>
+    </div>
+    <input type="range" id="s-maxspeed" min="5" max="35" step="1" value="18">
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Fuel System</div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Burn Rate</span>
+      <span><span class="param-value" id="v-burn">0.25</span><span class="param-unit">/f</span></span>
+    </div>
+    <input type="range" id="s-burn" min="0.02" max="1.0" step="0.01" value="0.25">
+  </div>
+
+  <div class="param">
+    <div class="param-row">
+      <span class="param-name">Recharge Rate</span>
+      <span><span class="param-value" id="v-recharge">0.15</span><span class="param-unit">/f</span></span>
+    </div>
+    <input type="range" id="s-recharge" min="0.01" max="0.5" step="0.01" value="0.15">
+  </div>
+
+  <div class="controls-box">
+    <div class="ctrl-row"><kbd>W</kbd><kbd>↑</kbd> — Jetpack thrust</div>
+    <div class="ctrl-row"><kbd>A</kbd><kbd>←</kbd> — Rotate left / walk left</div>
+    <div class="ctrl-row"><kbd>D</kbd><kbd>→</kbd> — Rotate right / walk right</div>
+  </div>
+
+  <button class="reset-btn" id="reset-btn">↺ Reset Position</button>
+</div>
+
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+// ── Config ──────────────────────────────────────────────────────────────────
+const cfg = {
+  gravity:        0.35,
+  thrust:         0.55,
+  airDrag:        0.988,
+  turnSpeed:      2.5,
+  walkAccel:      2.5,
+  groundFriction: 0.80,
+  fuelBurnRate:   0.25,
+  fuelRecharge:   0.15,
+  fuelCapacity:   100,
+  maxSpeed:       18
+};
+
+// ── World ───────────────────────────────────────────────────────────────────
+const WORLD_W  = 4400;
+const GROUND_Y = 830;
+
+const PLATFORMS = [
+  { x: 300,  y: 700, w: 160, h: 14 },
+  { x: 550,  y: 600, w: 180, h: 14 },
+  { x: 840,  y: 665, w: 130, h: 14 },
+  { x: 1080, y: 520, w: 210, h: 14 },
+  { x: 1380, y: 615, w: 155, h: 14 },
+  { x: 1620, y: 465, w: 175, h: 14 },
+  { x: 1890, y: 565, w: 145, h: 14 },
+  { x: 2130, y: 440, w: 195, h: 14 },
+  { x: 2420, y: 600, w: 160, h: 14 },
+  { x: 2670, y: 490, w: 200, h: 14 },
+  { x: 2950, y: 660, w: 140, h: 14 },
+  { x: 3180, y: 525, w: 185, h: 14 },
+  { x: 3470, y: 440, w: 210, h: 14 },
+  { x: 3740, y: 610, w: 175, h: 14 },
+  { x: 4050, y: 510, w: 200, h: 14 },
+  // High platforms
+  { x: 660,  y: 400, w: 120, h: 14 },
+  { x: 1230, y: 340, w: 145, h: 14 },
+  { x: 1790, y: 300, w: 140, h: 14 },
+  { x: 2300, y: 270, w: 165, h: 14 },
+  { x: 2870, y: 315, w: 135, h: 14 },
+  { x: 3360, y: 275, w: 155, h: 14 },
+];
+
+// Stars for background
+const STARS = Array.from({ length: 150 }, () => ({
+  x:        Math.random() * WORLD_W,
+  y:        50 + Math.random() * (GROUND_Y - 150),
+  r:        0.4 + Math.random() * 1.4,
+  alpha:    0.15 + Math.random() * 0.5,
+  par:      0.05 + Math.random() * 0.35,
+  twinkle:  Math.random() * Math.PI * 2
+}));
+
+// Distant mountain silhouette (generated once)
+const MOUNTAINS = (() => {
+  const pts = [{ x: 0, y: GROUND_Y }];
+  let cx = 0;
+  while (cx < WORLD_W + 300) {
+    cx += 80 + Math.random() * 160;
+    const h = 80 + Math.random() * 220;
+    pts.push({ x: cx - 60 - Math.random()*40, y: GROUND_Y - h });
+    pts.push({ x: cx, y: GROUND_Y });
+  }
+  pts.push({ x: WORLD_W + 400, y: GROUND_Y });
+  return pts;
+})();
+
+// ── Player ──────────────────────────────────────────────────────────────────
+let player;
+function resetPlayer() {
+  player = {
+    x: 140, y: GROUND_Y - 30,
+    vx: 0, vy: 0,
+    angle: 0,          // degrees, 0 = upright
+    onGround: false,
+    fuel: cfg.fuelCapacity,
+    facingRight: true,
+    walkPhase: 0       // for leg animation
+  };
+  camX = 0; camY = 0;
+  particles.length = 0;
+}
+
+// ── Camera ──────────────────────────────────────────────────────────────────
+let camX = 0, camY = 0;
+
+// ── Particles ────────────────────────────────────────────────────────────────
+const particles = [];
+
+// ── Input ────────────────────────────────────────────────────────────────────
+const keys = {};
+window.addEventListener('keydown', e => {
+  if (['KeyW','KeyA','KeyD','ArrowUp','ArrowLeft','ArrowRight'].includes(e.code))
+    e.preventDefault();
+  keys[e.code] = true;
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+const pressing = {
+  thrust: () => keys['KeyW'] || keys['ArrowUp'],
+  left:   () => keys['KeyA'] || keys['ArrowLeft'],
+  right:  () => keys['KeyD'] || keys['ArrowRight'],
+};
+
+// ── Physics ──────────────────────────────────────────────────────────────────
+let frameCount = 0;
+
+function update() {
+  frameCount++;
+  player.onGround = checkGround();
+
+  // Gravity
+  player.vy += cfg.gravity;
+
+  // Thrust
+  const thrusting = pressing.thrust() && player.fuel > 0;
+  if (thrusting) {
+    const rad = player.angle * (Math.PI / 180);
+    player.vx += Math.sin(rad) * cfg.thrust;
+    player.vy += -Math.cos(rad) * cfg.thrust;
+    player.fuel = Math.max(0, player.fuel - cfg.fuelBurnRate);
+    spawnFlame();
+  }
+
+  if (player.onGround) {
+    const moving = pressing.left() || pressing.right();
+    if (pressing.left())  { player.vx -= cfg.walkAccel * 0.3; player.facingRight = false; }
+    if (pressing.right()) { player.vx += cfg.walkAccel * 0.3; player.facingRight = true;  }
+    if (moving) player.walkPhase += Math.abs(player.vx) * 0.15;
+
+    player.angle  *= 0.7;
+    if (Math.abs(player.angle) < 0.3) player.angle = 0;
+    player.vx     *= cfg.groundFriction;
+    if (Math.abs(player.vx) < 0.05) player.vx = 0;
+
+    if (!thrusting) player.fuel = Math.min(cfg.fuelCapacity, player.fuel + cfg.fuelRecharge);
+  } else {
+    if (pressing.left())  player.angle -= cfg.turnSpeed;
+    if (pressing.right()) player.angle += cfg.turnSpeed;
+    player.vx *= cfg.airDrag;
+    player.vy *= cfg.airDrag;
+  }
+
+  // Speed cap
+  const spd = Math.hypot(player.vx, player.vy);
+  if (spd > cfg.maxSpeed) { const r = cfg.maxSpeed / spd; player.vx *= r; player.vy *= r; }
+
+  // Move + collide
+  player.x += player.vx;
+  player.y += player.vy;
+  resolveCollisions();
+
+  // World bounds
+  player.x = Math.max(15, Math.min(WORLD_W - 15, player.x));
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.06;
+    p.life -= 0.055;
+    p.size *= 0.935;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Camera (smooth follow)
+  const tx = player.x - canvas.width  * 0.45;
+  const ty = player.y - canvas.height * 0.62;
+  camX += (tx - camX) * 0.09;
+  camY += (ty - camY) * 0.09;
+  camX = Math.max(0, Math.min(WORLD_W - canvas.width, camX));
+}
+
+function checkGround() {
+  if (player.vy < 0) return false;
+  const tol = 3;
+  const feetY = player.y + 30;
+  if (feetY >= GROUND_Y - tol) return true;
+  for (const pl of PLATFORMS) {
+    if (player.x > pl.x + 5 && player.x < pl.x + pl.w - 5 &&
+        feetY >= pl.y - tol && feetY <= pl.y + tol + Math.abs(player.vy) + 1)
+      return true;
+  }
+  return false;
+}
+
+function resolveCollisions() {
+  const feetY = player.y + 30;
+  if (feetY > GROUND_Y) {
+    player.y = GROUND_Y - 30;
+    if (player.vy > 0) player.vy = 0;
+  }
+  for (const pl of PLATFORMS) {
+    if (player.x > pl.x + 5 && player.x < pl.x + pl.w - 5) {
+      const prevFeetY = feetY - player.vy;
+      if (prevFeetY <= pl.y + 2 && feetY >= pl.y && player.vy >= 0) {
+        player.y = pl.y - 30;
+        player.vy = 0;
+      }
+    }
+  }
+}
+
+// ── Flame particles ──────────────────────────────────────────────────────────
+function spawnFlame() {
+  const rad = player.angle * (Math.PI / 180);
+  // Jetpack nozzle in local space (back-bottom of figure)
+  const lx = -13, ly = 12;
+  // Rotate local → world
+  const nozzleX = player.x + lx * Math.cos(rad) - ly * Math.sin(rad);
+  const nozzleY = player.y + lx * Math.sin(rad) + ly * Math.cos(rad);
+  // Flame shoots opposite to thrust direction
+  const fdx = -Math.sin(rad);
+  const fdy =  Math.cos(rad);
+
+  for (let i = 0; i < 5; i++) {
+    const spread = (Math.random() - 0.5) * 0.6;
+    const cs = Math.cos(spread), ss = Math.sin(spread);
+    const fx = fdx * cs - fdy * ss;
+    const fy = fdx * ss + fdy * cs;
+    const spd = 2.5 + Math.random() * 3.5;
+    particles.push({
+      x: nozzleX + (Math.random() - 0.5) * 4,
+      y: nozzleY + (Math.random() - 0.5) * 4,
+      vx: fx * spd + player.vx * 0.18,
+      vy: fy * spd + player.vy * 0.18,
+      life: 0.8 + Math.random() * 0.2,
+      size: 6 + Math.random() * 6,
+    });
+  }
+}
+
+// ── Drawing helpers ──────────────────────────────────────────────────────────
+const sx = x => x - camX;
+const sy = y => y - camY;
+
+// ── Draw background ──────────────────────────────────────────────────────────
+function drawBackground() {
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, '#030609');
+  grad.addColorStop(1, '#091628');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Stars (parallax, gentle twinkle)
+  const t = frameCount * 0.018;
+  for (const s of STARS) {
+    const screenX = s.x - camX * s.par;
+    if (screenX < -5 || screenX > canvas.width + 5) continue;
+    const screenY = s.y - camY * s.par * 0.4;
+    const pulse = 0.8 + 0.2 * Math.sin(t + s.twinkle);
+    ctx.globalAlpha = s.alpha * pulse;
+    ctx.fillStyle = '#dde8ff';
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Distant mountains (parallax 0.18)
+  const mp = 0.18;
+  ctx.fillStyle = '#0a1520';
+  ctx.beginPath();
+  ctx.moveTo(MOUNTAINS[0].x - camX * mp, canvas.height);
+  for (const pt of MOUNTAINS) ctx.lineTo(pt.x - camX * mp, sy(pt.y));
+  ctx.lineTo(canvas.width + 100, canvas.height);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ── Draw ground ──────────────────────────────────────────────────────────────
+function drawGround() {
+  const gsy = sy(GROUND_Y);
+  if (gsy > canvas.height) return;
+
+  // Ground fill
+  const gg = ctx.createLinearGradient(0, gsy, 0, gsy + 80);
+  gg.addColorStop(0, '#0d1f18');
+  gg.addColorStop(1, '#070f0c');
+  ctx.fillStyle = gg;
+  ctx.fillRect(0, gsy, canvas.width, canvas.height - gsy + 10);
+
+  // Surface line
+  ctx.strokeStyle = '#1a9e5a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, gsy);
+  ctx.lineTo(canvas.width, gsy);
+  ctx.stroke();
+
+  // Subtle sub-surface grid
+  ctx.strokeStyle = '#0d1810';
+  ctx.lineWidth = 1;
+  const gridSpacing = 80;
+  const startGX = Math.floor(camX / gridSpacing) * gridSpacing;
+  for (let gx = startGX; gx < camX + canvas.width + gridSpacing; gx += gridSpacing) {
+    const x = sx(gx);
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, gsy);
+    ctx.lineTo(x, gsy + 60);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Draw platforms ────────────────────────────────────────────────────────────
+function drawPlatforms() {
+  for (const pl of PLATFORMS) {
+    const px = sx(pl.x), py = sy(pl.y);
+    if (px + pl.w < -5 || px > canvas.width + 5) continue;
+
+    // Body
+    const pg = ctx.createLinearGradient(0, py, 0, py + pl.h + 30);
+    pg.addColorStop(0, '#0d2030');
+    pg.addColorStop(1, '#080e18');
+    ctx.fillStyle = pg;
+    ctx.fillRect(px, py, pl.w, pl.h + 30);
+
+    // Top highlight (bright rim)
+    ctx.fillStyle = '#1a9e5a';
+    ctx.fillRect(px, py, pl.w, 2);
+
+    // Glow above surface
+    const glow = ctx.createLinearGradient(0, py - 12, 0, py);
+    glow.addColorStop(0, 'rgba(26,158,90,0)');
+    glow.addColorStop(1, 'rgba(26,158,90,0.07)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(px, py - 12, pl.w, 12);
+
+    // Subtle edge columns
+    ctx.fillStyle = '#1a9e5a';
+    ctx.globalAlpha = 0.25;
+    ctx.fillRect(px, py, 2, pl.h + 30);
+    ctx.fillRect(px + pl.w - 2, py, 2, pl.h + 30);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ── Draw flame particles ──────────────────────────────────────────────────────
+function drawParticles() {
+  for (const p of particles) {
+    const psx = sx(p.x), psy = sy(p.y);
+    if (psx < -20 || psx > canvas.width + 20) continue;
+    const t = p.life; // 1=fresh → 0=dying
+    // Color: white-yellow core → orange → dark red
+    const r = 255;
+    const g = Math.floor(55 + t * 200);
+    const b = Math.floor(t * 40);
+    ctx.globalAlpha = Math.min(t * 1.2, 0.95);
+    // Outer glow
+    const grd = ctx.createRadialGradient(psx, psy, 0, psx, psy, p.size * t + 1);
+    grd.addColorStop(0, `rgb(${r},${g},${b})`);
+    grd.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(psx, psy, p.size * t + 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Draw stick figure ─────────────────────────────────────────────────────────
+function drawFigure() {
+  const figX = sx(player.x), figY = sy(player.y);
+  const thrusting = pressing.thrust() && player.fuel > 0;
+  const rad = player.angle * (Math.PI / 180);
+
+  ctx.save();
+  ctx.translate(figX, figY);
+  ctx.rotate(rad);
+
+  // If on ground and facing left, flip horizontally
+  // (only when angle ~ 0, i.e. on ground or just landed)
+  // We handle facing with eye position instead of full flip to keep jetpack on back
+
+  // === Jetpack body ===
+  ctx.fillStyle = '#2c4060';
+  ctx.strokeStyle = '#4a7098';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(-18, -12, 9, 24, 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Jetpack tank seam
+  ctx.strokeStyle = '#5a88b0';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(-16, -4); ctx.lineTo(-11, -4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-16,  2); ctx.lineTo(-11,  2); ctx.stroke();
+
+  // Nozzle
+  ctx.fillStyle = '#1a2c40';
+  ctx.strokeStyle = '#3a5878';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(-16, 10, 7, 7, 1);
+  ctx.fill();
+  ctx.stroke();
+
+  // Nozzle glow when thrusting
+  if (thrusting) {
+    ctx.globalAlpha = 0.45 + 0.2 * Math.sin(frameCount * 0.4);
+    const ng = ctx.createRadialGradient(-12, 16, 0, -12, 16, 9);
+    ng.addColorStop(0, '#ffb050');
+    ng.addColorStop(1, 'rgba(255,80,0,0)');
+    ctx.fillStyle = ng;
+    ctx.beginPath();
+    ctx.arc(-12, 16, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // === Body ===
+  ctx.strokeStyle = '#d8e8f0';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+
+  // Torso
+  ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(0, 10); ctx.stroke();
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -26, 9, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Arms (slight spread, subtle thruster sway)
+  const armSway = thrusting ? Math.sin(frameCount * 0.14) * 3 : 0;
+  ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(-13, -2 + armSway); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo( 13, -2 - armSway); ctx.stroke();
+
+  // Legs (walk cycle when on ground, dangle when airborne)
+  let legL, legR;
+  if (player.onGround && Math.abs(player.vx) > 0.2) {
+    const swing = Math.sin(player.walkPhase) * 10;
+    legL = { x: -7 + swing, y: 30 };
+    legR = { x:  7 - swing, y: 30 };
+  } else if (!player.onGround) {
+    // Legs trail slightly behind
+    const dangle = Math.sin(frameCount * 0.07) * 4;
+    legL = { x: -7 - dangle, y: 28 };
+    legR = { x:  7 + dangle, y: 28 };
+  } else {
+    legL = { x: -7, y: 30 };
+    legR = { x:  7, y: 30 };
+  }
+  ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(legL.x, legL.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(legR.x, legR.y); ctx.stroke();
+
+  // Eye (indicates facing direction)
+  const eyeX = player.facingRight ? 4 : -4;
+  ctx.fillStyle = '#d8e8f0';
+  ctx.beginPath();
+  ctx.arc(eyeX, -27, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Visor glint
+  ctx.fillStyle = 'rgba(180,220,255,0.4)';
+  ctx.beginPath();
+  ctx.arc(eyeX + 0.5, -28, 0.9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function drawHUD() {
+  const m = 14;
+
+  // ── Fuel bar ──
+  const barW = 150, barH = 9;
+  const fuelPct = Math.max(0, player.fuel / cfg.fuelCapacity);
+
+  // Label
+  ctx.fillStyle = '#3a5068';
+  ctx.font = '9px Courier New';
+  ctx.fillText('FUEL', m, m + 9);
+
+  // Background track
+  ctx.fillStyle = '#0c1820';
+  ctx.fillRect(m, m + 13, barW, barH);
+
+  // Fill
+  let fuelColor;
+  if (fuelPct > 0.55)      fuelColor = '#1a9e5a';
+  else if (fuelPct > 0.28) fuelColor = '#d48c10';
+  else                     fuelColor = '#c03030';
+
+  if (fuelPct > 0) {
+    // Animated shimmer when thrusting
+    const thrusting = pressing.thrust() && player.fuel > 0;
+    if (thrusting) {
+      const shimmer = ctx.createLinearGradient(m, 0, m + barW * fuelPct, 0);
+      shimmer.addColorStop(0, fuelColor);
+      const pct = ((frameCount * 0.04) % 1);
+      shimmer.addColorStop(Math.max(0, pct - 0.1), fuelColor);
+      shimmer.addColorStop(pct, '#ffffff88');
+      shimmer.addColorStop(Math.min(1, pct + 0.1), fuelColor);
+      shimmer.addColorStop(1, fuelColor);
+      ctx.fillStyle = shimmer;
+    } else {
+      ctx.fillStyle = fuelColor;
+    }
+    ctx.fillRect(m, m + 13, barW * fuelPct, barH);
+  }
+
+  // Border
+  ctx.strokeStyle = '#1a2c40';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(m, m + 13, barW, barH);
+
+  // Percentage text
+  ctx.fillStyle = '#3a5068';
+  ctx.font = '9px Courier New';
+  ctx.fillText(Math.floor(player.fuel) + '%', m + barW + 6, m + 21);
+
+  // ── Stats ──
+  const spd = Math.hypot(player.vx, player.vy);
+  const alt = Math.max(0, GROUND_Y - player.y);
+
+  ctx.fillStyle = '#2a4060';
+  ctx.font      = '10px Courier New';
+  ctx.fillText('SPD  ' + spd.toFixed(1),  m, m + 44);
+  ctx.fillText('ALT  ' + Math.floor(alt), m, m + 58);
+  ctx.fillText('ANG  ' + ((((player.angle % 360) + 360) % 360)).toFixed(0) + '°', m, m + 72);
+
+  // ── Status messages ──
+  if (player.fuel <= 0) {
+    ctx.fillStyle = '#c03030';
+    ctx.font = 'bold 11px Courier New';
+    const blink = Math.floor(frameCount / 20) % 2 === 0;
+    if (blink) ctx.fillText('⚠ FUEL EMPTY — LANDING', m, m + 96);
+  } else if (player.onGround && !pressing.thrust()) {
+    const refuelRate = cfg.fuelRecharge;
+    ctx.fillStyle = '#1a7e40';
+    ctx.font = '10px Courier New';
+    ctx.fillText('▣ REFUELING +' + refuelRate.toFixed(2) + '/f', m, m + 96);
+  } else if (pressing.thrust() && player.fuel > 0) {
+    ctx.fillStyle = '#ff9a50';
+    ctx.font = '10px Courier New';
+    ctx.fillText('▲ THRUSTING', m, m + 96);
+  }
+
+  // ── Mini angle indicator (compass rose) ──
+  const cx2 = canvas.width - 36, cy2 = 36, cr = 20;
+  ctx.strokeStyle = '#14202e';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx2, cy2, cr, 0, Math.PI * 2); ctx.stroke();
+
+  // Tick marks
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    ctx.strokeStyle = '#1e3048';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx2 + Math.sin(a) * (cr - 4), cy2 - Math.cos(a) * (cr - 4));
+    ctx.lineTo(cx2 + Math.sin(a) * cr,       cy2 - Math.cos(a) * cr);
+    ctx.stroke();
+  }
+
+  // Player angle arrow
+  const ar = player.angle * (Math.PI / 180);
+  ctx.strokeStyle = '#ff7a28';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx2, cy2);
+  ctx.lineTo(cx2 + Math.sin(ar) * (cr - 4), cy2 - Math.cos(ar) * (cr - 4));
+  ctx.stroke();
+
+  // Center dot
+  ctx.fillStyle = '#ff7a28';
+  ctx.beginPath();
+  ctx.arc(cx2, cy2, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ── Slider bindings ───────────────────────────────────────────────────────────
+function bindSlider(sId, vId, cfgKey, decimals) {
+  const sl = document.getElementById(sId);
+  const vl = document.getElementById(vId);
+  sl.addEventListener('input', () => {
+    const val = parseFloat(sl.value);
+    cfg[cfgKey] = val;
+    vl.textContent = val.toFixed(decimals);
+  });
+}
+bindSlider('s-gravity',  'v-gravity',  'gravity',        2);
+bindSlider('s-thrust',   'v-thrust',   'thrust',         2);
+bindSlider('s-drag',     'v-drag',     'airDrag',        3);
+bindSlider('s-turn',     'v-turn',     'turnSpeed',      1);
+bindSlider('s-walk',     'v-walk',     'walkAccel',      1);
+bindSlider('s-friction', 'v-friction', 'groundFriction', 2);
+bindSlider('s-maxspeed', 'v-maxspeed', 'maxSpeed',       0);
+bindSlider('s-burn',     'v-burn',     'fuelBurnRate',   2);
+bindSlider('s-recharge', 'v-recharge', 'fuelRecharge',   2);
+
+document.getElementById('reset-btn').addEventListener('click', resetPlayer);
+
+// ── Canvas resize ─────────────────────────────────────────────────────────────
+function resize() {
+  const w = document.getElementById('gameWrap');
+  canvas.width  = w.clientWidth;
+  canvas.height = w.clientHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+resetPlayer();
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+function loop() {
+  update();
+
+  drawBackground();
+  drawGround();
+  drawPlatforms();
+  drawParticles();
+  drawFigure();
+  drawHUD();
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
